@@ -165,3 +165,63 @@ def hip_symmetry_penalty(env, threshold: float = 0.3, asset_cfg: SceneEntityCfg 
     diff = torch.abs(left_hip - right_hip)
     penalty = torch.clamp(diff - threshold, min=0.0)
     return penalty
+
+
+def track_squat_joint_pos_exp(
+    env, std: float, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """跟踪 SquatPoseCommand 命令的关节角目标（命令向量的前 num_joints 维）。
+
+    注意：asset_cfg 必须按 articulation 顺序覆盖全部关节（默认即可），
+    否则与命令向量的关节顺序不对齐。
+    """
+    asset = env.scene[asset_cfg.name]
+    command = env.command_manager.get_command(command_name)
+    joint_targets = command[:, : asset.data.joint_pos.shape[1]]
+    error = torch.sum(torch.square(joint_targets - asset.data.joint_pos[:, asset_cfg.joint_ids]), dim=1)
+    return torch.exp(-error / std**2)
+
+
+def track_squat_base_height_exp(env, std: float, command_name: str) -> torch.Tensor:
+    """跟踪 SquatPoseCommand 命令的基座高度目标（命令向量的倒数第 2 维）。"""
+    asset = env.scene["robot"]
+    command = env.command_manager.get_command(command_name)
+    height_target = command[:, -2]
+    error = torch.square(height_target - asset.data.root_pos_w[:, 2])
+    return torch.exp(-error / std**2)
+
+
+def lin_vel_xy_l2(env, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+    """惩罚基座水平面线速度（原地蹲起不应平移）。"""
+    asset = env.scene[asset_cfg.name]
+    return torch.sum(torch.square(asset.data.root_lin_vel_b[:, :2]), dim=1)
+
+
+def leg_angle_window_penalty(
+    env, min_deg: float = 10.0, max_deg: float = 30.0, command_name: str = "squat_pose"
+) -> torch.Tensor:
+    """约束深蹲时大腿/小腿倾角落在 [min_deg, max_deg] 窗口内。
+
+    倾角定义（相对竖直方向，脚掌平放时）：
+        大腿倾角 = |hip_pitch|；小腿倾角 = |hip_pitch + knee_pitch|。
+    仅在蹲下相位激活（phase>0.5 线性门控，phase=1 即最深蹲时完全生效），
+    站立相位不约束（站立时倾角 <10° 是正常的）。
+    返回超出窗口的角度总和（度），奖励端取负权重即成惩罚。
+    """
+    asset = env.scene["robot"]
+    hip_ids, _ = asset.find_joints(["J00_HIP_PITCH_L", "J06_HIP_PITCH_R"], preserve_order=True)
+    knee_ids, _ = asset.find_joints(["J03_KNEE_PITCH_L", "J09_KNEE_PITCH_R"], preserve_order=True)
+    hip = asset.data.joint_pos[:, hip_ids]
+    knee = asset.data.joint_pos[:, knee_ids]
+    thigh_deg = torch.rad2deg(torch.abs(hip))
+    shank_deg = torch.rad2deg(torch.abs(hip + knee))
+    viol = (
+        torch.clamp(min_deg - thigh_deg, min=0.0)
+        + torch.clamp(thigh_deg - max_deg, min=0.0)
+        + torch.clamp(min_deg - shank_deg, min=0.0)
+        + torch.clamp(shank_deg - max_deg, min=0.0)
+    )
+    # 相位门控：只在深蹲附近生效
+    phase = env.command_manager.get_command(command_name)[:, -1]
+    gate = torch.clamp((phase - 0.5) / 0.5, min=0.0)
+    return viol * gate

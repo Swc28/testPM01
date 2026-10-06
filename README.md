@@ -122,12 +122,39 @@ python scripts/velocity/train.py --task Isaac-Velocity-MyTask-PM01-v0 \
 确认不报错、各奖励项非零后，再上 4096 环境正式训练。**奖励改了必须从头训**
 （旧 checkpoint 是旧奖励下学出的策略，不要 `--resume`）。
 
+## 蹲起任务（站立→蹲下→站立，关键帧跟踪，无需数据集）
+
+原理：`mdp/commands.py` 的 `SquatPoseCommand` 按余弦相位在站立/蹲下关键帧间插值
+（命令 = 24 关节目标 + 基座高度 + 相位），策略学习跟踪。蹲多深/多快改
+`squat_env_cfg.py`（训练）、`config/pm01/squat_env_cfg.py`（scale/相机/Play）。
+
+```bash
+# 训练（默认 5000 轮，每 500 轮存 checkpoint，最终为 model_4999.pt）
+python scripts/velocity/train.py --task Isaac-Squat-MyTask-PM01-v0 --headless --num_envs 4096
+
+# 监控（重点看 Metrics/squat_pose/error_joint_pos、error_base_height 下降）
+python -m tensorboard.main --logdir logs/rsl_rl/mytask_pm01_squat
+
+# 演示（注意：本仓库不生成 model.pt，checkpoint 用编号最大的 model_XXXX.pt）
+python scripts/velocity/play.py --task Isaac-Squat-MyTask-PM01-Play-v0 \
+    --num_envs 1 --load_run <时间戳目录> --checkpoint model_XXXX.pt
+
+# GUI 闪退/黑屏（无显示服务器）→ 离屏相机录视频（推荐）
+# 官方 --video 走视口截图，headless 下是黑帧；本命令用 Play 场景内的
+# TiledCamera 传感器离屏渲染逐帧写 mp4（依赖 imageio、imageio-ffmpeg）
+python -m engineai_rl_lab.tasks.mytask.record_video \
+    --task Isaac-Squat-MyTask-PM01-Play-v0 --num_envs 1 \
+    --load_run <时间戳目录> --checkpoint model_XXXX.pt --video_length 500
+# 输出：./videos/<任务>_<run>_<checkpoint>.mp4（50Hz 实时回放）
+```
+
 ## 修改日志
 
 | 日期 | 修改项 | 原值 | 新值 | 备注 |
 |---|---|---|---|---|
 | 2026-10-05 | weight | 1.0 | 1.5 | 奖励权重提升 |
 | 2026-10-05 | std | 0.5 | 0.35 | 降低探索噪声 |
+| 2026-10-06 | 新增蹲起任务 | — | `Isaac-Squat-MyTask-PM01-v0/-Play-v0` | 关键帧跟踪，无需数据集；新增 mdp/commands.py、squat_env_cfg.py、record_video.py |
 
 ## 维护约定
 
