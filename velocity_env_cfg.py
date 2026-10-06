@@ -67,7 +67,7 @@ class SceneCfg(InteractiveSceneCfg):
 class CommandsCfg:
     base_velocity = mdp.UniformVelocityCommandCfg(
         asset_name="robot",
-        resampling_time_range=(10.0, 10.0),
+        resampling_time_range=(5.0, 10.0),
         rel_standing_envs=0.02,
         rel_heading_envs=1.0,
         heading_command=True,
@@ -177,6 +177,11 @@ class EventCfg:
 @configclass
 class RewardsCfg:
     termination_penalty = RewTerm(func=mdp.is_terminated, weight=-200.0)
+    stand_still = RewTerm(
+    func=mdp.stand_still_joint_deviation_l1,
+    weight=-0.5,
+    params={"command_name": "base_velocity", "asset_cfg": SceneEntityCfg("robot")},
+    )
     track_lin_vel_xy_exp = RewTerm(
         func=mdp.track_lin_vel_xy_yaw_frame_exp,
         weight=1.5,
