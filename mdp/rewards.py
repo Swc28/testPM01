@@ -221,7 +221,7 @@ def leg_angle_window_penalty(
         + torch.clamp(min_deg - shank_deg, min=0.0)
         + torch.clamp(shank_deg - max_deg, min=0.0)
     )
-    # 相位门控：只在深蹲附近生效
+    # 相位门控：只在深蹲附近生效；双腿违规角度求和降为 (num_envs,) 再乘门控
     phase = env.command_manager.get_command(command_name)[:, -1]
     gate = torch.clamp((phase - 0.5) / 0.5, min=0.0)
-    return viol * gate
+    return viol.sum(dim=1) * gate

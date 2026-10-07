@@ -55,8 +55,23 @@ class PM01MyTaskSquatEnvCfg(SquatEnvCfg):
 
         self.terminations.base_contact.params["sensor_cfg"].body_names = "LINK_BASE"
 
+
+@configclass
+class PM01MyTaskSquatEnvCfg_PLAY(PM01MyTaskSquatEnvCfg):
+    def __post_init__(self) -> None:
+        super().__post_init__()
+
+        self.scene.num_envs = 50
+        self.scene.env_spacing = 2.5
+        # 40 s = 10 个蹲起周期，便于观察
+        self.episode_length_s = 40.0
+        self.observations.policy.enable_corruption = False
+
         # 离屏相机（仅 Play 场景）：无显示器环境录视频用，RecordVideo 视口截图在
-        # headless 下是黑帧，必须用传感器相机（RTX 离屏渲染）
+        # headless 下是黑帧，必须用传感器相机（RTX 离屏渲染）。
+        # 注意：不能放进训练配置——训练时 4096 个环境各挂一个相机既浪费显存，
+        # 还会强制训练命令加 --enable_cameras（否则报
+        # "A camera was spawned without the --enable_cameras flag"）
         self.scene.view_cam = TiledCameraCfg(
             prim_path="{ENV_REGEX_NS}/ViewCam",
             offset=CameraCfg.OffsetCfg(
@@ -76,15 +91,3 @@ class PM01MyTaskSquatEnvCfg(SquatEnvCfg):
             update_period=0,
             debug_vis=False,
         )
-
-
-@configclass
-class PM01MyTaskSquatEnvCfg_PLAY(PM01MyTaskSquatEnvCfg):
-    def __post_init__(self) -> None:
-        super().__post_init__()
-
-        self.scene.num_envs = 50
-        self.scene.env_spacing = 2.5
-        # 40 s = 10 个蹲起周期，便于观察
-        self.episode_length_s = 40.0
-        self.observations.policy.enable_corruption = False
