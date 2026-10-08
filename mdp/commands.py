@@ -112,12 +112,12 @@ class SquatPoseCommandCfg(CommandTermCfg):
     估算：0.9 × cos(大腿倾角)，大腿倾角25° → ≈0.816。"""
 
     squat_joint_pos: dict[str, float] = {
-        "J00_HIP_PITCH_L": -0.4363,   # -25°：大腿倾角 = |hip| = 25° ∈ (10°, 30°)
-        "J03_KNEE_PITCH_L": 0.8727,   # +50°：小腿倾角 = |hip+knee| = 25° ∈ (10°, 30°)
-        "J04_ANKLE_PITCH_L": -0.4363, # -(hip+knee)，保持脚掌平放
-        "J06_HIP_PITCH_R": -0.4363,
-        "J09_KNEE_PITCH_R": 0.8727,
-        "J10_ANKLE_PITCH_R": -0.4363,
+        "J00_HIP_PITCH_L": -0.6109,   # -25°：大腿倾角 = |hip| = 25° ∈ (10°, 30°)  new:-35°
+        "J03_KNEE_PITCH_L": 1.2217,   # +50°：小腿倾角 = |hip+knee| = 25° ∈ (10°, 30°) new:+70°
+        "J04_ANKLE_PITCH_L": -0.6109, # -(hip+knee)，保持脚掌平放 new:-35°
+        "J06_HIP_PITCH_R": -0.6109,
+        "J09_KNEE_PITCH_R": 1.2217,
+        "J10_ANKLE_PITCH_R": -0.6109,
     }
     """蹲姿关键帧：关节名 → 目标角度（rad）。未列出的关节保持站立姿态。
     脚平放规则：ankle_pitch = -(hip_pitch + knee_pitch)。

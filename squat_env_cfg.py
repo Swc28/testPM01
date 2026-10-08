@@ -54,7 +54,7 @@ class CommandsCfg:
         asset_name="robot",
         period_s=4.0,
         base_height_stand=0.9,
-        base_height_squat=0.75,
+        base_height_squat=0.65, #delete: 0.75
         debug_vis=False,
     )
 
@@ -134,11 +134,11 @@ class RewardsCfg:
     track_base_height = RewTerm(
         func=mdp.track_squat_base_height_exp, weight=1.0, params={"command_name": "squat_pose", "std": 0.05}
     )
-    # 深蹲相位强制大腿/小腿倾角 ∈ [10°, 30°]
+    # 深蹲相位强制大腿/小腿倾角 ∈ [10°, 40°]
     leg_angle_window = RewTerm(
         func=mdp.leg_angle_window_penalty,
         weight=-0.05,
-        params={"min_deg": 10.0, "max_deg": 30.0, "command_name": "squat_pose"},
+        params={"min_deg": 10.0, "max_deg": 40.0, "command_name": "squat_pose"}, #delete: 30.0
     )
     # 原地稳定：身体保持直立、不平移、不晃动（防倾倒加强）
     flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-2.0)
